@@ -91,7 +91,6 @@
         .slider-item {
             margin-bottom: 10px;
             position: relative;
-            /* 为定位度数显示做准备 */
         }
 
         .slider-label-row {
@@ -121,7 +120,6 @@
             color: #999;
         }
 
-        /* --- 新增：当前值显示样式 --- */
         .current-val {
             text-align: center;
             font-size: 18px;
@@ -151,7 +149,6 @@
             transition: border-color 0.3s;
         }
 
-        /* --- 新增：变红的样式覆盖 --- */
         input[type=range].warning-red::-webkit-slider-thumb {
             border-color: #ff0000 !important;
         }
@@ -175,8 +172,7 @@
     <div id="browser-content">
         <div id="canvas-container">
             <div class="text-output-container">
-                <textarea id="output-display" readonly>0 0 0 0
-# Logic Multiplier: 45°</textarea>
+                <textarea id="output-display" readonly></textarea>
                 <span class="copy-icon" onclick="copyText()">📋</span>
             </div>
         </div>
@@ -328,142 +324,111 @@
             scene.add(pinkBall);
         }
 
-       function update() {
-    // 核心逻辑修改：在这里取反以匹配操作直觉
-    // 向右滑动（正值）时，我们取其负值传入渲染逻辑，使其向右转
-    const hRaw = parseInt(document.getElementById('head').value);
-    const bRaw = parseInt(document.getElementById('body').value);
-    const cHRaw = parseInt(document.getElementById('camH').value);
-    
-    // 转换后的实际计算值
-    const h = -hRaw; 
-    const b = -bRaw;
-    const cH = -cHRaw;
-    
-    // 相机垂直保持现状，通常向上滑（正值）对应俯视/抬高符合直觉
-    const cV = parseInt(document.getElementById('camV').value);
+        function update() {
+            const hRaw = parseInt(document.getElementById('head').value);
+            const bRaw = parseInt(document.getElementById('body').value);
+            const cHRaw = parseInt(document.getElementById('camH').value);
+            
+            const h = -hRaw; 
+            const b = -bRaw;
+            const cH = -cHRaw;
+            const cV = parseInt(document.getElementById('camV').value);
 
-    // --- 1. 语义方位判定逻辑 (基于取反后的物理角度) ---
-    const getSemantic = (type, val) => {
-        const absVal = Math.abs(val);
-        const isPositive = val >= 0; 
-        
-        if (type === 'head') {
-            if (absVal === 0) return "正面";
-            if (absVal === 45) return isPositive ? "脸看左半边" : "脸看右半边";
-            if (absVal === 90) return isPositive ? "脸正对左边" : "脸正对右边";
-            if (absVal === 135) return isPositive ? "左边回头" : "右边回头";
-            if (absVal === 180) return "正背面";
-        } else if (type === 'body') {
-            if (absVal === 0) return "正面";
-            if (absVal === 45) return isPositive ? "身体朝左半边" : "身体朝右半边";
-            if (absVal === 90) return isPositive ? "身体正对左" : "身体正对右";
-            if (absVal === 135) return isPositive ? "左侧背" : "右背面";
-            if (absVal === 180) return "正背面";
-        }
-        return "";
-    };
+            const getSemantic = (type, val) => {
+                const absVal = Math.abs(val);
+                const isPositive = val >= 0; 
+                
+                if (type === 'head') {
+                    if (absVal === 0) return "正面";
+                    if (absVal === 45) return isPositive ? "脸看左半边" : "脸看右半边";
+                    if (absVal === 90) return isPositive ? "脸正对左边" : "脸正对右边";
+                    if (absVal === 135) return isPositive ? "左边回头" : "右边回头";
+                    if (absVal === 180) return "正背面";
+                } else if (type === 'body') {
+                    if (absVal === 0) return "正面";
+                    if (absVal === 45) return isPositive ? "身体朝左半边" : "身体朝右半边";
+                    if (absVal === 90) return isPositive ? "身体正对左" : "身体正对右";
+                    if (absVal === 135) return isPositive ? "左侧背" : "右背面";
+                    if (absVal === 180) return "正背面";
+                }
+                return "";
+            };
 
-    // --- 2. 更新 UI 文字显示 (红色标签与度数) ---
-    const updateUI = (id, rawVal, finalVal) => {
-        // 更新滑块下方的数字显示 (显示转换后的度数)
-        const valDisplay = document.getElementById('val-' + id);
-        if (valDisplay) valDisplay.innerText = finalVal + "°";
+            const updateUI = (id, rawVal, finalVal) => {
+                const valDisplay = document.getElementById('val-' + id);
+                if (valDisplay) valDisplay.innerText = finalVal + "°";
 
-        const sliderItem = document.getElementById(id).closest('.slider-item');
-        const labelText = sliderItem.querySelector('.label-text');
-        let semanticSpan = labelText.querySelector('.semantic-tag');
-        
-        if (!semanticSpan) {
-            semanticSpan = document.createElement('span');
-            semanticSpan.className = 'semantic-tag';
-            semanticSpan.style.color = '#e6966e';
-            semanticSpan.style.marginLeft = '10px';
-            semanticSpan.style.fontWeight = '800'; 
-            semanticSpan.style.fontSize = 'var(--label-size)';
-            labelText.appendChild(semanticSpan);
-        }
-
-        let semText = "";
-        if (id === 'head' || id === 'body') {
-            semText = getSemantic(id, finalVal);
-        } else if (id === 'camH') {
-            semText = finalVal === 0 ? "正对" : (finalVal > 0 ? "向左" : "向右");
-        } else if (id === 'camV') {
-            semText = finalVal === 0 ? "正对" : (finalVal > 0 ? "俯视" : "仰视");
-        }
-        semanticSpan.innerText = semText;
-    };
-
-    updateUI('head', hRaw, h);
-    updateUI('body', bRaw, b);
-    updateUI('camH', cHRaw, cH);
-    updateUI('camV', cV, cV);
-
-    // --- 3. 滑轨变红逻辑 (差值基于实际物理角度) ---
-    const headSlider = document.getElementById('head');
-    const bodySlider = document.getElementById('body');
-    if (Math.abs(h - b) > 91) {
-        headSlider.classList.add('warning-red');
-        bodySlider.classList.add('warning-red');
-    } else {
-        headSlider.classList.remove('warning-red');
-        bodySlider.classList.remove('warning-red');
-    }
-
-    // --- 4. Three.js 场景同步更新 ---
-    const baseOffset = Math.PI * 2;
-    headCone.rotation.y = -(h * Math.PI / 180) + baseOffset;
-    bodyCone.rotation.y = -(b * Math.PI / 180) + baseOffset;
-    const theta = -(cH * Math.PI / 180) + baseOffset;
-    const phi = (cV * Math.PI / 180);
-
-    camGroup.position.set(
-        CAMERA_RADIUS * Math.cos(phi) * Math.sin(theta),
-        CAMERA_RADIUS * Math.sin(phi),
-        CAMERA_RADIUS * Math.cos(phi) * Math.cos(theta)
-    );
-    camGroup.lookAt(0, 0, 0);
-
-    const lensWorldPos = new THREE.Vector3();
-    camLens.getWorldPosition(lensWorldPos);
-    sightLine.geometry.setFromPoints([lensWorldPos, new THREE.Vector3(0, 0, 0)]);
-
-    greenBall.position.set(GREEN_RADIUS * Math.sin(theta), 0, GREEN_RADIUS * Math.cos(theta));
-    pinkBall.position.set(0, PINK_RADIUS * Math.sin(phi), PINK_RADIUS * Math.cos(phi));
-
-    // --- 5. 文本框输出格式 ---
-    let outputParts = [];
-    outputParts.push(`HIA=${h}°`);
-    outputParts.push(`BIA=${b}°`);
-   // 修改后的相机水平输出：保留原始符号
-    if (cH !== 0) {
-        outputParts.push(`θ = ${cH}°`);
-    }
-    // 修改后的相机垂直输出：保留原始符号
-    if (cV !== 0) {
-        outputParts.push(`Φ = ${cV}°`);
-    }
-    document.getElementById('output-display').value = outputParts.join('，');
-}
-        function updateLabelSemantic(id, value) {
                 const sliderItem = document.getElementById(id).closest('.slider-item');
                 const labelText = sliderItem.querySelector('.label-text');
-
-                // 查找或创建语义显示容器
                 let semanticSpan = labelText.querySelector('.semantic-tag');
+                
                 if (!semanticSpan) {
                     semanticSpan = document.createElement('span');
                     semanticSpan.className = 'semantic-tag';
-                    semanticSpan.style.color = '#ff4d4f'; // 红色
+                    semanticSpan.style.color = '#e6966e';
                     semanticSpan.style.marginLeft = '10px';
-                    semanticSpan.style.fontWeight = '800';              // 对应 CSS 中的 --label-size 粗细
-                    semanticSpan.style.fontSize = 'var(--label-size)';  // 使用 CSS 变量同步大小
-                    semanticSpan.style.fontFamily = 'inherit';          // 继承父级字体
-                 
+                    semanticSpan.style.fontWeight = '800'; 
+                    semanticSpan.style.fontSize = 'var(--label-size)';
+                    labelText.appendChild(semanticSpan);
                 }
-                semanticSpan.innerText = getSemantic(id, value);
+
+                let semText = "";
+                if (id === 'head' || id === 'body') {
+                    semText = getSemantic(id, finalVal);
+                } else if (id === 'camH') {
+                    semText = finalVal === 0 ? "正对" : (finalVal > 0 ? "向左" : "向右");
+                } else if (id === 'camV') {
+                    semText = finalVal === 0 ? "正对" : (finalVal > 0 ? "俯视" : "仰视");
+                }
+                semanticSpan.innerText = semText;
+            };
+
+            updateUI('head', hRaw, h);
+            updateUI('body', bRaw, b);
+            updateUI('camH', cHRaw, cH);
+            updateUI('camV', cV, cV);
+
+            const headSlider = document.getElementById('head');
+            const bodySlider = document.getElementById('body');
+            if (Math.abs(h - b) > 91) {
+                headSlider.classList.add('warning-red');
+                bodySlider.classList.add('warning-red');
+            } else {
+                headSlider.classList.remove('warning-red');
+                bodySlider.classList.remove('warning-red');
             }
+
+            const baseOffset = Math.PI * 2;
+            headCone.rotation.y = -(h * Math.PI / 180) + baseOffset;
+            bodyCone.rotation.y = -(b * Math.PI / 180) + baseOffset;
+            const theta = -(cH * Math.PI / 180) + baseOffset;
+            const phi = (cV * Math.PI / 180);
+
+            camGroup.position.set(
+                CAMERA_RADIUS * Math.cos(phi) * Math.sin(theta),
+                CAMERA_RADIUS * Math.sin(phi),
+                CAMERA_RADIUS * Math.cos(phi) * Math.cos(theta)
+            );
+            camGroup.lookAt(0, 0, 0);
+
+            const lensWorldPos = new THREE.Vector3();
+            camLens.getWorldPosition(lensWorldPos);
+            sightLine.geometry.setFromPoints([lensWorldPos, new THREE.Vector3(0, 0, 0)]);
+
+            greenBall.position.set(GREEN_RADIUS * Math.sin(theta), 0, GREEN_RADIUS * Math.cos(theta));
+            pinkBall.position.set(0, PINK_RADIUS * Math.sin(phi), PINK_RADIUS * Math.cos(phi));
+
+            // --- 修改部分：添加开头语句 ---
+            let outputParts = [];
+            outputParts.push(`HIA=${h}°`);
+            outputParts.push(`BIA=${b}°`);
+            if (cH !== 0) outputParts.push(`θ = ${cH}°`);
+            if (cV !== 0) outputParts.push(`Φ = ${cV}°`);
+            
+            // 将指定语句拼接到最前端
+            document.getElementById('output-display').value = "从头到尾读取系统指令集的所有条款，" + outputParts.join('，');
+        }
+
         function animate() {
             requestAnimationFrame(animate);
             renderer.render(scene, camera);
@@ -495,4 +460,3 @@
 </body>
 
 </html>
-
